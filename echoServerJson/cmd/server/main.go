@@ -1,16 +1,18 @@
 package main
 
 import (
+	"echoServerJson/cfg"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
-// Todo:сделать ручку на метод POST которая бы принимала тело запроса и приводила через это добро в структуру
 func main() {
 	e := echo.New()
 	e.GET("/", GetHandler, Middleware)
-	e.POST("/", GetHandler)
+	e.POST("/tasks", GetHandler)
 	e.Logger.Fatal((e.Start(":8080")))
 }
 func Middleware(next echo.HandlerFunc) echo.HandlerFunc {
@@ -34,5 +36,14 @@ func GetHandler(c echo.Context) error {
 }
 
 func PostHandler(c echo.Context) error {
-	return nil
+	var task cfg.Task
+	if err := c.Bind(&task); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+	if err := c.Validate(task); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+	task.ID = "task_" + uuid.New().String()
+	task.Metadata.CreatedAt = time.Now()
+	return c.JSON(http.StatusCreated, task)
 }
